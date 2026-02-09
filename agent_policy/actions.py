@@ -1,0 +1,11 @@
+# agent_policy/actions.py
+
+from enum import Enum
+
+
+class AgentAction(str, Enum):
+    SELECT_FOR_ROLE = "SELECT_FOR_ROLE"
+    SELECT_FAST_TRACK = "SELECT_FAST_TRACK"
+    SELECT_HIGHER_ROLE_MATCH = "SELECT_HIGHER_ROLE_MATCH"
+    POOL_FOR_FUTURE = "POOL_FOR_FUTURE"
+    REJECT_WITH_REASON = "REJECT_WITH_REASON"

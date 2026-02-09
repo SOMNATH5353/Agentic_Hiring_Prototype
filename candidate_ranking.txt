@@ -1,0 +1,38 @@
+
+================================================================================
+📊 CANDIDATE RANKING REPORT
+================================================================================
+
+   #1 | Python_dev.pdf            | Score: 0.7308 | Excellent
+      | Action: Select for fast-track hiring
+      | RFS: 0.605 | CSS: 0.345 | GPS: 1.000 | DCS: 1.000 | ELC: 1
+      | Reason: Strong candidate with excellent role fit (0.605), capability (0.345), and domain compatibility (1.0)...
+--------------------------------------------------------------------------------
+   #2 | SrivatsavAuswin.pdf       | Score: 0.5568 | Good
+      | Action: Schedule interview
+      | RFS: 0.000 | CSS: 0.588 | GPS: 0.784 | DCS: 1.000 | ELC: 1
+      | Reason: Strong ML/Python developer with excellent domain fit (1.0) and capability (0.588). Growth potential:...
+--------------------------------------------------------------------------------
+   #3 | jack.pdf                  | Score: 0.4834 | Marginal
+      | Action: Schedule interview
+      | RFS: 0.000 | CSS: 0.167 | GPS: 1.000 | DCS: 1.000 | ELC: 1
+      | Reason: Promising candidate with high growth potential (1.0) and strong domain fit (1.0). Has required progr...
+--------------------------------------------------------------------------------
+   #4 | java.pdf                  | Score: 0.3913 | Marginal
+      | Action: Reject with explanation
+      | RFS: 0.000 | CSS: 0.652 | GPS: 0.217 | DCS: 1.000 | ELC: 0
+      | Reason: Not recommended: missing required programming language (e.g., Java/C++ developer for Python role). ...
+--------------------------------------------------------------------------------
+   #5 | cpp.pdf                   | Score: 0.2941 | Rejected
+      | Action: Reject with explanation
+      | RFS: 0.000 | CSS: 0.312 | GPS: 0.469 | DCS: 0.833 | ELC: 0
+      | Reason: Not recommended: missing required programming language (e.g., Java/C++ developer for Python role). ...
+--------------------------------------------------------------------------------
+
+================================================================================
+TIER DEFINITIONS:
+  • Excellent (≥0.7): Top candidates, recommend immediate action
+  • Good (≥0.5): Solid candidates, worth interviewing
+  • Marginal (≥0.3): Edge cases, consider for specific needs
+  • Rejected (<0.3): Not suitable for current role
+================================================================================
