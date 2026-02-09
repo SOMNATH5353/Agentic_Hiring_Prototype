@@ -1,0 +1,13 @@
+# Existing dependencies
+pdfplumber
+reportlab
+sentence-transformers
+scikit-learn
+numpy
+
+# FastAPI dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+aiofiles
