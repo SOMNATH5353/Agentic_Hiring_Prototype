@@ -8,7 +8,8 @@ from typing import List
 
 class SemanticEmbedder:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        hf_token = os.getenv("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")
+        # Get token from environment variable (proper way)
+        hf_token = os.getenv("HF_TOKEN")
 
         if hf_token:
             self.model = SentenceTransformer(
@@ -16,6 +17,7 @@ class SemanticEmbedder:
                 use_auth_token=hf_token
             )
         else:
+            # Fall back to loading without token (uses public models)
             self.model = SentenceTransformer(model_name)
 
     def encode(self, sentences: List[str]) -> np.ndarray:
