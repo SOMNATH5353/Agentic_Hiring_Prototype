@@ -48,16 +48,15 @@ class AnalysisService:
         if self.embedder is None:
             self.embedder = SemanticEmbedder()
     
-    async def analyze_session(self, session_dir: str, session_id: str) -> Dict:
-        """Main analysis pipeline"""
+    async def analyze_files(self, upload_dir: str, output_dir: str) -> Dict:
+        """
+        Main analysis pipeline - simplified without session ID.
+        Processes files from upload_dir and saves to output_dir.
+        """
         self._ensure_embedder()
         
-        # Create output directory
-        output_dir = Path("outputs") / session_id
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
         # Load files
-        pdf_files = list(Path(session_dir).glob("*.pdf"))
+        pdf_files = list(Path(upload_dir).glob("*.pdf"))
         
         if len(pdf_files) < 2:
             raise ValueError("At least 2 PDF files required (1 JD + 1+ resumes)")
@@ -90,7 +89,7 @@ class AnalysisService:
         
         # Generate analysis output PDF
         write_analysis_pdf(
-            output_path=str(output_dir / "analysis_output.pdf"),
+            output_path=str(Path(output_dir) / "analysis_output.pdf"),
             jd_sentences=jd_sentences,
             resumes=parsed_resumes
         )
@@ -155,23 +154,21 @@ class AnalysisService:
         # Rank candidates
         ranked_candidates = rank_candidates(candidates_data)
         
-        # Generate ranking PDF IMMEDIATELY (before response)
-        print(f"Generating ranking PDF for session {session_id}...")
-        write_ranking_pdf(
-            output_path=str(output_dir / "candidate_ranking_report.pdf"),
-            ranked_candidates=ranked_candidates,
-            jd_file=jd_file
-        )
-        print("✅ Ranking PDF generated")
-        
         # Save XAI report
-        with open(output_dir / "xai_explanations.txt", "w", encoding="utf-8") as f:
+        with open(Path(output_dir) / "xai_explanations.txt", "w", encoding="utf-8") as f:
             f.write("EXPLAINABLE AI CANDIDATE ANALYSIS REPORT\n")
             f.write("=" * 80 + "\n\n")
             for candidate in ranked_candidates:
                 if candidate['name'] in xai_reports:
                     f.write(xai_reports[candidate['name']])
                     f.write("\n\n")
+        
+        # Generate ranking PDF
+        write_ranking_pdf(
+            output_path=str(Path(output_dir) / "candidate_ranking_report.pdf"),
+            ranked_candidates=ranked_candidates,
+            jd_file=jd_file
+        )
         
         # Format response
         summary = {

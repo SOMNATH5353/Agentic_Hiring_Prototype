@@ -1,13 +1,19 @@
-# Existing dependencies
-pdfplumber
-reportlab
-sentence-transformers
-scikit-learn
-numpy
+# Core dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+pydantic==2.5.3
+aiofiles==23.2.1
 
-# FastAPI dependencies
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic
-aiofiles
+# PDF processing
+pdfplumber==0.10.3
+reportlab==4.0.7
+
+# ML and embeddings
+sentence-transformers==2.2.2
+scikit-learn==1.3.2
+numpy==1.24.3
+torch==2.1.2
+
+# Utilities
+python-dotenv==1.0.0

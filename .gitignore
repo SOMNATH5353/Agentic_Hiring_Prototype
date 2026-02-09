@@ -43,9 +43,8 @@ env/
 # Output files
 *.pdf
 *.txt
-analysis_output.pdf
-candidate_ranking_report.pdf
-candidate_ranking.txt
+uploads/
+outputs/
 
 # Logs
 *.log
@@ -54,14 +53,11 @@ candidate_ranking.txt
 .DS_Store
 Thumbs.db
 
-# Jupyter Notebooks
-.ipynb_checkpoints/
-*.ipynb
-
 # Model cache
 .cache/
 models/
 sentence-transformers/
+torch/
 
-# Data (optional - comment out if you want to include data)
-# data/*.pdf
+# Data (optional)
+data/*.pdf

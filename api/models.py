@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Dict, Optional
 from enum import Enum
 
@@ -34,14 +34,13 @@ class AnalysisResponse(BaseModel):
 class UploadResponse(BaseModel):
     """File upload response"""
     message: str
-    job_description_file: Optional[str] = None
-    resume_files: List[str]
     total_files: int
-    session_id: str  # ← ADD THIS LINE
 
 
 class HealthResponse(BaseModel):
     """Health check response"""
+    model_config = ConfigDict(protected_namespaces=())  # Allow model_ prefix
+    
     status: str
     version: str
-    model_loaded: bool
+    model_loaded: bool  # This was causing the warning
