@@ -1,0 +1,45 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
+.env.local
+
+# Output files
+*.pdf
+*.txt
+temp_uploads/
+temp_outputs/
+uploads/
+outputs/
+data/*.pdf
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
