@@ -8,7 +8,7 @@ from typing import List
 
 class SemanticEmbedder:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        # Get token from environment variable (proper way)
+        # Get token from environment variable (NO hardcoded token!)
         hf_token = os.getenv("HF_TOKEN")
 
         if hf_token:
