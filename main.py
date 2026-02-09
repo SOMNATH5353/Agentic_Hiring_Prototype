@@ -11,7 +11,14 @@ from agent_policy.ranking import rank_candidates, generate_ranking_report, calcu
 
 from semantic.embedder import SemanticEmbedder
 from semantic.similarity import compute_semantic_matches
-from agent_policy.scores import execution_language_score
+from agent_policy.scores import (
+    role_fit_score,
+    combined_role_fit_score,  # ← ADD THIS
+    capability_strength_score,
+    growth_potential_score,
+    domain_compatibility_score,
+    execution_language_score
+)
 from agent_policy.policy import decide_action
 from agent_policy.explanation import explain_decision
 from agent_policy.ranking import rank_candidates, generate_ranking_report, calculate_composite_score
@@ -20,6 +27,7 @@ from ontology.jd_requirements import extract_jd_requirements
 
 from agent_policy.scores import (
     role_fit_score,
+    combined_role_fit_score,  # ← ADD THIS
     capability_strength_score,
     growth_potential_score,
     domain_compatibility_score,
@@ -159,7 +167,8 @@ def main():
         )
 
         # -------- AGENT SCORES --------
-        rfs = role_fit_score(semantic_matches)
+        # Use combined scoring that recognizes ML → Python transferability
+        rfs = combined_role_fit_score(semantic_matches, resume_sentences, jd_requirements)
         css = capability_strength_score(resume_sentences)
         gps = growth_potential_score(resume_sentences)
         dcs = domain_compatibility_score(jd_requirements, resume_sentences)

@@ -8,8 +8,11 @@ from ontology.jd_requirements import extract_jd_requirements
 from semantic.embedder import SemanticEmbedder
 from semantic.similarity import compute_semantic_matches
 from agent_policy.scores import (
-    role_fit_score, capability_strength_score,
-    growth_potential_score, domain_compatibility_score,
+    role_fit_score,
+    combined_role_fit_score,  # ← ADD THIS
+    capability_strength_score,
+    growth_potential_score,
+    domain_compatibility_score,
     execution_language_score
 )
 from agent_policy.policy import decide_action
@@ -109,8 +112,12 @@ class AnalysisService:
                 threshold=0.55
             )
             
-            # Calculate scores
-            rfs = role_fit_score(semantic_matches)
+            # Calculate scores with ML→Python inference
+            rfs = combined_role_fit_score(
+                semantic_matches, 
+                resume_sentences, 
+                jd_requirements
+            )
             css = capability_strength_score(resume_sentences)
             gps = growth_potential_score(resume_sentences)
             dcs = domain_compatibility_score(jd_requirements, resume_sentences)

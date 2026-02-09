@@ -4,19 +4,21 @@ from agent_policy.policy import AgentAction
 def calculate_composite_score(rfs, css, gps, dcs, elc) -> float:
     """
     Calculate weighted composite score for ranking.
+    Updated weights to value domain compatibility more for ML/DS candidates.
+    
     Weights prioritize:
-    - Role Fit (35%): Most important for immediate job match
-    - Domain Compatibility (25%): Must work in right tech stack
+    - Domain Compatibility (30%): ↑ Increased - ML expertise is highly valuable
+    - Role Fit (30%): Remains important but shares top priority
     - Capability Strength (20%): Experience matters
     - Execution Language (15%): Must have required language
     - Growth Potential (5%): Nice to have for future
     """
     weights = {
-        'rfs': 0.35,
-        'dcs': 0.25,
-        'css': 0.20,
-        'elc': 0.15,
-        'gps': 0.05
+        'dcs': 0.30,  # ↑ Increased from 0.25
+        'rfs': 0.30,  # ↑ Increased from 0.35
+        'css': 0.20,  # Same
+        'elc': 0.15,  # Same
+        'gps': 0.05   # Same
     }
     
     # Normalize ELC to 0-1 scale (it's 0 or 1)

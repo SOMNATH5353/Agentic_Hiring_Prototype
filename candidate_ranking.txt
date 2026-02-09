@@ -3,29 +3,29 @@
 📊 CANDIDATE RANKING REPORT
 ================================================================================
 
-   #1 | Python_dev.pdf            | Score: 0.7308 | Excellent
+   #1 | SrivatsavAuswin.pdf       | Score: 0.8168 | Excellent
       | Action: Select for fast-track hiring
-      | RFS: 0.605 | CSS: 0.345 | GPS: 1.000 | DCS: 1.000 | ELC: 1
-      | Reason: Strong candidate with excellent role fit (0.605), capability (0.345), and domain compatibility (1.0)...
+      | RFS: 0.700 | CSS: 0.588 | GPS: 0.784 | DCS: 1.000 | ELC: 1
+      | Reason: Strong candidate with excellent role fit (0.7), capability (0.588), and domain compatibility (1.0). ...
 --------------------------------------------------------------------------------
-   #2 | SrivatsavAuswin.pdf       | Score: 0.5568 | Good
-      | Action: Schedule interview
-      | RFS: 0.000 | CSS: 0.588 | GPS: 0.784 | DCS: 1.000 | ELC: 1
-      | Reason: Strong ML/Python developer with excellent domain fit (1.0) and capability (0.588). Growth potential:...
+   #2 | Python_dev.pdf            | Score: 0.7790 | Excellent
+      | Action: Select for fast-track hiring
+      | RFS: 0.700 | CSS: 0.345 | GPS: 1.000 | DCS: 1.000 | ELC: 1
+      | Reason: Strong candidate with excellent role fit (0.7), capability (0.345), and domain compatibility (1.0). ...
 --------------------------------------------------------------------------------
-   #3 | jack.pdf                  | Score: 0.4834 | Marginal
+   #3 | jack.pdf                  | Score: 0.7434 | Excellent
       | Action: Schedule interview
-      | RFS: 0.000 | CSS: 0.167 | GPS: 1.000 | DCS: 1.000 | ELC: 1
+      | RFS: 0.700 | CSS: 0.167 | GPS: 1.000 | DCS: 1.000 | ELC: 1
       | Reason: Promising candidate with high growth potential (1.0) and strong domain fit (1.0). Has required progr...
 --------------------------------------------------------------------------------
-   #4 | java.pdf                  | Score: 0.3913 | Marginal
+   #4 | java.pdf                  | Score: 0.6513 | Good
       | Action: Reject with explanation
-      | RFS: 0.000 | CSS: 0.652 | GPS: 0.217 | DCS: 1.000 | ELC: 0
+      | RFS: 0.700 | CSS: 0.652 | GPS: 0.217 | DCS: 1.000 | ELC: 0
       | Reason: Not recommended: missing required programming language (e.g., Java/C++ developer for Python role). ...
 --------------------------------------------------------------------------------
-   #5 | cpp.pdf                   | Score: 0.2941 | Rejected
+   #5 | cpp.pdf                   | Score: 0.5457 | Good
       | Action: Reject with explanation
-      | RFS: 0.000 | CSS: 0.312 | GPS: 0.469 | DCS: 0.833 | ELC: 0
+      | RFS: 0.700 | CSS: 0.312 | GPS: 0.469 | DCS: 0.833 | ELC: 0
       | Reason: Not recommended: missing required programming language (e.g., Java/C++ developer for Python role). ...
 --------------------------------------------------------------------------------
 

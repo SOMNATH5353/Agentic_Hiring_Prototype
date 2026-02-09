@@ -23,6 +23,62 @@ def role_fit_score(semantic_matches: List[Dict]) -> float:
     return round(avg_score, 3)
 
 
+def inferred_role_fit_score(resume_sentences: List[str], jd_requirements: List[str]) -> float:
+    """
+    Calculate inferred role fit for ML/DS candidates applying to Python roles.
+    ML/DS experience implies: Python, data handling, APIs, debugging, testing, etc.
+    """
+    resume_text = ' '.join(resume_sentences).lower()
+    jd_text = ' '.join(jd_requirements).lower()
+    
+    # Check if this is ML/DS candidate for Python role
+    ml_indicators = ['machine learning', 'ml', 'data science', 'tensorflow', 
+                     'pytorch', 'scikit', 'pandas', 'numpy', 'neural network',
+                     'deep learning', 'ai', 'data analysis']
+    
+    python_role_indicators = ['python', 'api', 'backend', 'database', 
+                             'flask', 'django', 'web', 'software development']
+    
+    has_ml_bg = any(ind in resume_text for ind in ml_indicators)
+    is_python_role = any(ind in jd_text for ind in python_role_indicators)
+    
+    if not (has_ml_bg and is_python_role):
+        return 0.0
+    
+    # ML/DS candidates inherently have these skills
+    implied_skills = {
+        'python programming': ['python', 'ml', 'machine learning', 'data science'],
+        'data handling': ['pandas', 'numpy', 'data', 'dataset', 'preprocessing'],
+        'apis': ['api', 'rest', 'flask', 'django', 'web'],
+        'debugging': ['debug', 'test', 'testing', 'pytest', 'unittest'],
+        'databases': ['sql', 'database', 'postgresql', 'mongodb', 'data'],
+        'problem solving': ['algorithm', 'ml', 'model', 'optimization', 'mathematics']
+    }
+    
+    matched_categories = 0
+    for category, indicators in implied_skills.items():
+        if any(ind in resume_text for ind in indicators):
+            matched_categories += 1
+    
+    # Score based on coverage of implied skills
+    inferred_score = matched_categories / len(implied_skills)
+    return round(inferred_score, 3)
+
+
+def combined_role_fit_score(semantic_matches: List[Dict], resume_sentences: List[str], jd_requirements: List[str]) -> float:
+    """
+    Combine direct semantic matching with inferred skill matching.
+    Gives fair evaluation to ML developers for Python roles.
+    """
+    direct_score = role_fit_score(semantic_matches)
+    inferred_score = inferred_role_fit_score(resume_sentences, jd_requirements)
+    
+    # Take the maximum - benefit of doubt for transferable skills
+    combined = max(direct_score, inferred_score * 0.7)  # Inferred gets 70% weight
+    
+    return round(combined, 3)
+
+
 # -------------------------------
 # CAPABILITY STRENGTH SCORE
 # -------------------------------
