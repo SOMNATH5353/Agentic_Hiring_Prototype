@@ -6,13 +6,15 @@ from ingestion.loader import load_text
 from ingestion.preprocess import preprocess_text
 from utils.pdf_writer import write_analysis_pdf
 from utils.ranking_pdf_writer import write_ranking_pdf
+from explainability.xai_report import generate_xai_explanation
+from agent_policy.ranking import rank_candidates, generate_ranking_report, calculate_composite_score
 
 from semantic.embedder import SemanticEmbedder
 from semantic.similarity import compute_semantic_matches
 from agent_policy.scores import execution_language_score
 from agent_policy.policy import decide_action
 from agent_policy.explanation import explain_decision
-from agent_policy.ranking import rank_candidates, generate_ranking_report
+from agent_policy.ranking import rank_candidates, generate_ranking_report, calculate_composite_score
 
 from ontology.jd_requirements import extract_jd_requirements
 
@@ -26,7 +28,7 @@ from agent_policy.scores import (
 
 from agent_policy.policy import decide_action
 from agent_policy.explanation import explain_decision
-from agent_policy.ranking import rank_candidates, generate_ranking_report
+from agent_policy.ranking import rank_candidates, generate_ranking_report, calculate_composite_score
 
 
 DATA_DIR = "data"
@@ -143,6 +145,7 @@ def main():
 
     # Store all candidate data for ranking
     candidates_data = []
+    xai_reports = {}  # Store XAI explanations
 
     for resume_name, resume_sentences in parsed_resumes.items():
         resume_embeddings = embedder.encode(resume_sentences)
@@ -165,6 +168,20 @@ def main():
         # -------- AGENT DECISION --------
         action = decide_action(rfs, css, gps, dcs, elc)
         explanation = explain_decision(action, rfs, css, gps, dcs, elc)
+        composite = calculate_composite_score(rfs, css, gps, dcs, elc)
+
+        # -------- EXPLAINABLE AI ANALYSIS --------
+        xai_explanation = generate_xai_explanation(
+            candidate_name=resume_name,
+            rfs=rfs, css=css, gps=gps, dcs=dcs, elc=elc,
+            action=action,
+            composite_score=composite,
+            semantic_matches=semantic_matches,
+            jd_requirements=jd_requirements,
+            resume_sentences=resume_sentences
+        )
+        
+        xai_reports[resume_name] = xai_explanation
 
         # Store candidate data
         candidates_data.append({
@@ -186,7 +203,8 @@ def main():
         print(f"  Domain Compatibility Score (DCS): {dcs}")
         print(f"  Execution Language Score (ELC): {elc}")
         print(f"  🧠 Agent Action: {action}")
-        print(f"  📝 Explanation: {explanation}\n")
+        print(f"  📝 Explanation: {explanation}")
+        print(f"\n  🔍 XAI Analysis Available - see xai_explanations.txt\n")
 
     # --------------------------------------------------
     # STEP 8: RANK CANDIDATES WITH TIEBREAKERS
@@ -205,7 +223,24 @@ def main():
     print("✅ Candidate ranking saved to 'candidate_ranking.txt'")
     
     # --------------------------------------------------
-    # STEP 9: GENERATE COMPREHENSIVE RANKING PDF
+    # STEP 9: SAVE XAI EXPLANATIONS
+    # --------------------------------------------------
+    xai_output = "xai_explanations.txt"
+    
+    with open(xai_output, "w", encoding="utf-8") as f:
+        f.write("EXPLAINABLE AI CANDIDATE ANALYSIS REPORT\n")
+        f.write("=" * 80 + "\n\n")
+        
+        for resume_name in ranked_candidates:
+            candidate_name = resume_name['name']
+            if candidate_name in xai_reports:
+                f.write(xai_reports[candidate_name])
+                f.write("\n\n")
+    
+    print(f"✅ Explainable AI analysis saved to '{xai_output}'")
+    
+    # --------------------------------------------------
+    # STEP 10: GENERATE COMPREHENSIVE RANKING PDF
     # --------------------------------------------------
     ranking_pdf = "candidate_ranking_report.pdf"
     

@@ -23,18 +23,33 @@ def compute_semantic_matches(
     if len(jd_embeddings) == 0 or len(resume_embeddings) == 0:
         return matches
 
-    similarity_matrix = cosine_similarity(resume_embeddings, jd_embeddings)
+    # Ensure embeddings are 2D
+    if len(jd_embeddings.shape) == 1:
+        jd_embeddings = jd_embeddings.reshape(1, -1)
+    if len(resume_embeddings.shape) == 1:
+        resume_embeddings = resume_embeddings.reshape(1, -1)
 
-    for r_idx, resume_sentence in enumerate(resume_sentences):
-        for j_idx, jd_sentence in enumerate(jd_sentences):
+    # Compute similarity matrix: shape (num_jd, num_resume)
+    similarity_matrix = cosine_similarity(jd_embeddings, resume_embeddings)
 
-            score = similarity_matrix[r_idx][j_idx]
+    for jd_idx in range(len(jd_sentences)):
+        for resume_idx in range(len(resume_sentences)):
+            # Safety check for bounds
+            if jd_idx >= similarity_matrix.shape[0] or resume_idx >= similarity_matrix.shape[1]:
+                continue
 
-            if score >= threshold:
+            similarity = similarity_matrix[jd_idx, resume_idx]  # Use comma notation for 2D indexing
+
+            if similarity >= threshold:
                 matches.append({
-                    "resume_point": resume_sentence,
-                    "jd_point": jd_sentence,
-                    "similarity": round(float(score), 3)
+                    'jd_text': jd_sentences[jd_idx],
+                    'resume_text': resume_sentences[resume_idx],
+                    'similarity': float(similarity),
+                    'jd_index': jd_idx,
+                    'resume_index': resume_idx
                 })
+
+    # Sort by similarity descending
+    matches.sort(key=lambda x: x['similarity'], reverse=True)
 
     return matches
