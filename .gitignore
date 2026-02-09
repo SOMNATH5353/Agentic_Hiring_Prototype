@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual Environment
 venv/
@@ -33,22 +34,18 @@ env/
 *.swo
 *~
 
-# Environment variables
+# Environment variables - CRITICAL!
 .env
 .env.local
 .env.*.local
-
-# Hugging Face Token (IMPORTANT!)
-hf_token.txt
+*.env
 
 # Output files
 *.pdf
+*.txt
 analysis_output.pdf
 candidate_ranking_report.pdf
 candidate_ranking.txt
-
-# Data files (optional - uncomment if you don't want to commit data)
-# data/*.pdf
 
 # Logs
 *.log
@@ -65,3 +62,6 @@ Thumbs.db
 .cache/
 models/
 sentence-transformers/
+
+# Data (optional - comment out if you want to include data)
+# data/*.pdf
