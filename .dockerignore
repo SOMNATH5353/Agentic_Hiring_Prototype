@@ -25,12 +25,14 @@ ENV/
 
 # Output files
 *.pdf
-*.txt
 temp_uploads/
 temp_outputs/
 uploads/
 outputs/
 data/*.pdf
+# Exclude specific output text files but NOT requirements.txt or runtime.txt
+candidate_ranking.txt
+xai_explanations.txt
 
 # Git
 .git/
