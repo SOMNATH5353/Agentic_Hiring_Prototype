@@ -1,6 +1,9 @@
 import os
+import json
+import pickle
 from pathlib import Path
 from typing import Dict, List
+import numpy as np
 
 from ingestion.loader import load_text
 from ingestion.preprocess import preprocess_text
@@ -44,6 +47,12 @@ class AnalysisService:
         self.jd_sentences = None
         self.jd_requirements = None
         self.jd_embeddings = None
+        
+        # Persistent storage paths
+        self.storage_dir = Path("storage")
+        self.storage_dir.mkdir(exist_ok=True)
+        self.jd_data_file = self.storage_dir / "jd_data.json"
+        self.jd_embeddings_file = self.storage_dir / "jd_embeddings.npy"
     
     def is_model_loaded(self) -> bool:
         return self.embedder is not None
@@ -52,12 +61,71 @@ class AnalysisService:
         if self.embedder is None:
             self.embedder = SemanticEmbedder()
     
+    def _save_jd_data(self):
+        """Save processed JD data to disk"""
+        try:
+            # Save text data as JSON
+            jd_data = {
+                "sentences": self.jd_sentences,
+                "requirements": self.jd_requirements
+            }
+            with open(self.jd_data_file, "w", encoding="utf-8") as f:
+                json.dump(jd_data, f, ensure_ascii=False, indent=2)
+            
+            # Save embeddings as numpy array
+            np.save(self.jd_embeddings_file, self.jd_embeddings)
+            
+            print(f"✅ JD data saved to disk: {self.storage_dir}")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to save JD data: {e}")
+            return False
+    
+    def _load_jd_data(self) -> bool:
+        """Load processed JD data from disk"""
+        try:
+            # Check if files exist
+            if not self.jd_data_file.exists() or not self.jd_embeddings_file.exists():
+                return False
+            
+            # Load text data
+            with open(self.jd_data_file, "r", encoding="utf-8") as f:
+                jd_data = json.load(f)
+                self.jd_sentences = jd_data["sentences"]
+                self.jd_requirements = jd_data["requirements"]
+            
+            # Load embeddings
+            self.jd_embeddings = np.load(self.jd_embeddings_file)
+            
+            print(f"✅ JD data loaded from disk: {len(self.jd_requirements)} requirements")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to load JD data: {e}")
+            return False
+    
+    def _clear_jd_data(self):
+        """Clear JD data from memory and disk"""
+        self.jd_sentences = None
+        self.jd_requirements = None
+        self.jd_embeddings = None
+        
+        # Remove files
+        if self.jd_data_file.exists():
+            self.jd_data_file.unlink()
+        if self.jd_embeddings_file.exists():
+            self.jd_embeddings_file.unlink()
+        
+        print("🗑️  JD data cleared")
+    
     async def process_jd(self, jd_dir: str):
         """
         Process Job Description and cache results.
         Called when JD is uploaded via POST /upload-jd
         """
         self._ensure_embedder()
+        
+        # Clear old JD data
+        self._clear_jd_data()
         
         # Load JD file
         pdf_files = list(Path(jd_dir).glob("*.pdf"))
@@ -79,6 +147,9 @@ class AnalysisService:
         # Generate embeddings
         self.jd_embeddings = self.embedder.encode(self.jd_requirements)
         
+        # Save to disk for persistence
+        self._save_jd_data()
+        
         print(f"✅ JD processed: {len(self.jd_requirements)} requirements extracted")
     
     
@@ -89,10 +160,12 @@ class AnalysisService:
         """
         self._ensure_embedder()
         
-        # Ensure JD is processed
+        # Try to load JD data from memory, then from disk, then reprocess
         if self.jd_requirements is None or self.jd_embeddings is None:
-            # Process JD if not already done
-            await self.process_jd(jd_dir)
+            print("⚠️  JD not in memory, attempting to load from disk...")
+            if not self._load_jd_data():
+                print("⚠️  JD not on disk, reprocessing...")
+                await self.process_jd(jd_dir)
         
         # Load resume files
         pdf_files = list(Path(resumes_dir).glob("*.pdf"))

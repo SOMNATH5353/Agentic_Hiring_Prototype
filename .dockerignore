@@ -29,6 +29,7 @@ temp_uploads/
 temp_outputs/
 uploads/
 outputs/
+storage/
 data/*.pdf
 # Exclude specific output text files but NOT requirements.txt or runtime.txt
 candidate_ranking.txt

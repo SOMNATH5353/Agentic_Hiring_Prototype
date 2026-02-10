@@ -19,10 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p temp_uploads temp_outputs
+RUN mkdir -p temp_uploads temp_outputs storage
 
 # Expose port (Koyeb will set PORT env variable)
 EXPOSE 8000
 
-# Run the application
+# Run the application with single worker (important for in-memory JD caching)
 CMD uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1

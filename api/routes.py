@@ -21,7 +21,10 @@ TEMP_RESUMES_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR = Path("temp_outputs")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# Store JD state
+STORAGE_DIR = Path("storage")
+STORAGE_DIR.mkdir(exist_ok=True)
+
+# Store JD state in memory (for current session)
 jd_state = {
     "uploaded": False,
     "filename": None,
@@ -29,10 +32,17 @@ jd_state = {
 }
 
 
+def check_jd_exists() -> bool:
+    """Check if JD data exists in persistent storage"""
+    jd_data_file = STORAGE_DIR / "jd_data.json"
+    jd_embeddings_file = STORAGE_DIR / "jd_embeddings.npy"
+    return jd_data_file.exists() and jd_embeddings_file.exists()
+
+
 def cleanup_all_files():
-    """Clean up all temporary files"""
+    """Clean up all temporary files and persistent storage"""
     try:
-        for directory in [TEMP_JD_DIR, TEMP_RESUMES_DIR, OUTPUT_DIR]:
+        for directory in [TEMP_JD_DIR, TEMP_RESUMES_DIR, OUTPUT_DIR, STORAGE_DIR]:
             if directory.exists():
                 shutil.rmtree(directory)
                 directory.mkdir(exist_ok=True)
@@ -111,8 +121,10 @@ async def upload_and_analyze_resumes(
     Requires JD to be uploaded first via POST /upload-jd
     Returns instant analysis against the uploaded JD.
     """
-    # Check if JD is uploaded
-    if not jd_state["uploaded"] or not jd_state["processed"]:
+    # Check if JD is uploaded (in memory OR on disk)
+    jd_exists = jd_state["uploaded"] and jd_state["processed"] or check_jd_exists()
+    
+    if not jd_exists:
         raise HTTPException(
             status_code=400,
             detail="Job Description not uploaded. Please upload JD first using POST /upload-jd"
@@ -176,11 +188,17 @@ async def upload_and_analyze_resumes(
 @router.get("/jd-status")
 async def get_jd_status():
     """Check if Job Description is uploaded and ready"""
+    # Check both memory and persistent storage
+    in_memory = jd_state["uploaded"] and jd_state["processed"]
+    on_disk = check_jd_exists()
+    is_ready = in_memory or on_disk
+    
     return {
         "uploaded": jd_state["uploaded"],
         "filename": jd_state["filename"],
         "processed": jd_state["processed"],
-        "ready_for_resumes": jd_state["uploaded"] and jd_state["processed"]
+        "persisted": on_disk,
+        "ready_for_resumes": is_ready
     }
 
 
