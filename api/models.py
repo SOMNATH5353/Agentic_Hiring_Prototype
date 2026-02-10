@@ -44,3 +44,11 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     model_loaded: bool  # This was causing the warning
+
+
+class JDUploadResponse(BaseModel):
+    """Job Description upload response"""
+    message: str
+    filename: str
+    status: str
+    next_step: str

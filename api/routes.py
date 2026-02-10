@@ -5,29 +5,37 @@ import os
 import shutil
 from pathlib import Path
 
-from api.models import AnalysisResponse, UploadResponse, HealthResponse
+from api.models import AnalysisResponse, UploadResponse, HealthResponse, JDUploadResponse
 from api.service import AnalysisService
 
 router = APIRouter()
 analysis_service = AnalysisService()
 
-# Single shared directory for temporary processing
-TEMP_DIR = Path("temp_uploads")
-TEMP_DIR.mkdir(exist_ok=True)
+# Storage directories
+TEMP_JD_DIR = Path("temp_jd")
+TEMP_JD_DIR.mkdir(exist_ok=True)
+
+TEMP_RESUMES_DIR = Path("temp_resumes")
+TEMP_RESUMES_DIR.mkdir(exist_ok=True)
 
 OUTPUT_DIR = Path("temp_outputs")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Store JD state
+jd_state = {
+    "uploaded": False,
+    "filename": None,
+    "processed": False
+}
 
-def cleanup_temp_files():
-    """Clean up temporary files"""
+
+def cleanup_all_files():
+    """Clean up all temporary files"""
     try:
-        if TEMP_DIR.exists():
-            shutil.rmtree(TEMP_DIR)
-            TEMP_DIR.mkdir(exist_ok=True)
-        if OUTPUT_DIR.exists():
-            shutil.rmtree(OUTPUT_DIR)
-            OUTPUT_DIR.mkdir(exist_ok=True)
+        for directory in [TEMP_JD_DIR, TEMP_RESUMES_DIR, OUTPUT_DIR]:
+            if directory.exists():
+                shutil.rmtree(directory)
+                directory.mkdir(exist_ok=True)
     except Exception as e:
         print(f"Cleanup error: {e}")
 
@@ -42,27 +50,87 @@ async def health_check():
     }
 
 
-@router.post("/analyze", response_model=AnalysisResponse)
-async def analyze_candidates(
+@router.post("/upload-jd", response_model=JDUploadResponse)
+async def upload_job_description(file: UploadFile = File(...)):
+    """
+    Step 1: Upload Job Description PDF
+    
+    This must be done before uploading resumes.
+    """
+    # Validate file type
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only PDF files allowed. Got: {file.filename}"
+        )
+    
+    # Clean previous JD
+    cleanup_all_files()
+    
+    # Save JD file
+    jd_path = TEMP_JD_DIR / file.filename
+    
+    with open(jd_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    # Update JD state
+    jd_state["uploaded"] = True
+    jd_state["filename"] = file.filename
+    jd_state["processed"] = False
+    
+    # Process JD immediately
+    try:
+        await analysis_service.process_jd(str(TEMP_JD_DIR))
+        jd_state["processed"] = True
+        
+        return {
+            "message": f"Job Description uploaded and processed successfully",
+            "filename": file.filename,
+            "status": "ready",
+            "next_step": "Upload resumes using POST /upload-resumes"
+        }
+    
+    except Exception as e:
+        jd_state["uploaded"] = False
+        jd_state["processed"] = False
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process JD: {str(e)}"
+        )
+
+
+@router.post("/upload-resumes", response_model=AnalysisResponse)
+async def upload_and_analyze_resumes(
     files: List[UploadFile] = File(...),
     background_tasks: BackgroundTasks = None
 ):
     """
-    Upload and analyze candidates in one step.
-    Upload JD + resumes, get instant analysis.
+    Step 2: Upload Resumes and Get Analysis
     
-    Minimum: 2 files (1 JD + 1+ resumes)
+    Requires JD to be uploaded first via POST /upload-jd
+    Returns instant analysis against the uploaded JD.
     """
-    if len(files) < 2:
+    # Check if JD is uploaded
+    if not jd_state["uploaded"] or not jd_state["processed"]:
         raise HTTPException(
             status_code=400,
-            detail="At least 2 files required (1 JD + 1+ resumes)"
+            detail="Job Description not uploaded. Please upload JD first using POST /upload-jd"
         )
     
-    # Clean previous files first
-    cleanup_temp_files()
+    # Validate at least one resume
+    if len(files) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="At least 1 resume file required"
+        )
     
-    # Save uploaded files
+    # Clean previous resumes
+    if TEMP_RESUMES_DIR.exists():
+        shutil.rmtree(TEMP_RESUMES_DIR)
+    TEMP_RESUMES_DIR.mkdir(exist_ok=True)
+    
+    # Save resume files
     for file in files:
         if not file.filename.endswith('.pdf'):
             raise HTTPException(
@@ -70,29 +138,29 @@ async def analyze_candidates(
                 detail=f"Only PDF files allowed. Got: {file.filename}"
             )
         
-        file_path = TEMP_DIR / file.filename
+        file_path = TEMP_RESUMES_DIR / file.filename
         
         with open(file_path, "wb") as f:
             content = await file.read()
             f.write(content)
     
     try:
-        # Run analysis - pass OUTPUT_DIR as string
-        results = await analysis_service.analyze_files(str(TEMP_DIR), str(OUTPUT_DIR))
+        # Run analysis
+        results = await analysis_service.analyze_resumes(
+            str(TEMP_JD_DIR),
+            str(TEMP_RESUMES_DIR),
+            str(OUTPUT_DIR)
+        )
         
         # Verify files were created
         ranking_pdf = OUTPUT_DIR / "candidate_ranking_report.pdf"
         analysis_pdf = OUTPUT_DIR / "analysis_output.pdf"
         xai_txt = OUTPUT_DIR / "xai_explanations.txt"
         
-        print(f"Files created:")
-        print(f"  Ranking PDF: {ranking_pdf.exists()} - {ranking_pdf}")
-        print(f"  Analysis PDF: {analysis_pdf.exists()} - {analysis_pdf}")
-        print(f"  XAI TXT: {xai_txt.exists()} - {xai_txt}")
-        
-        # Optional: Schedule cleanup later
-        # if background_tasks:
-        #     background_tasks.add_task(cleanup_temp_files_delayed, 3600)
+        print(f"✅ Analysis complete. Files created:")
+        print(f"  Ranking PDF: {ranking_pdf.exists()}")
+        print(f"  Analysis PDF: {analysis_pdf.exists()}")
+        print(f"  XAI TXT: {xai_txt.exists()}")
         
         return results
     
@@ -105,18 +173,26 @@ async def analyze_candidates(
         )
 
 
+@router.get("/jd-status")
+async def get_jd_status():
+    """Check if Job Description is uploaded and ready"""
+    return {
+        "uploaded": jd_state["uploaded"],
+        "filename": jd_state["filename"],
+        "processed": jd_state["processed"],
+        "ready_for_resumes": jd_state["uploaded"] and jd_state["processed"]
+    }
+
+
 @router.get("/download/ranking-report")
 async def download_ranking_report():
     """Download the comprehensive ranking report PDF"""
     output_path = OUTPUT_DIR / "candidate_ranking_report.pdf"
     
-    print(f"Looking for ranking report at: {output_path}")
-    print(f"File exists: {output_path.exists()}")
-    
     if not output_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"Ranking report not found at {output_path}. Run /analyze first."
+            detail="Ranking report not found. Run /upload-resumes first."
         )
     
     return FileResponse(
@@ -132,13 +208,10 @@ async def download_analysis_output():
     """Download the sanitized analysis output PDF"""
     output_path = OUTPUT_DIR / "analysis_output.pdf"
     
-    print(f"Looking for analysis output at: {output_path}")
-    print(f"File exists: {output_path.exists()}")
-    
     if not output_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"Analysis output not found at {output_path}. Run /analyze first."
+            detail="Analysis output not found. Run /upload-resumes first."
         )
     
     return FileResponse(
@@ -154,13 +227,10 @@ async def download_xai_report():
     """Download the XAI explanations text file"""
     output_path = OUTPUT_DIR / "xai_explanations.txt"
     
-    print(f"Looking for XAI report at: {output_path}")
-    print(f"File exists: {output_path.exists()}")
-    
     if not output_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"XAI report not found at {output_path}. Run /analyze first."
+            detail="XAI report not found. Run /upload-resumes first."
         )
     
     return FileResponse(
@@ -172,19 +242,65 @@ async def download_xai_report():
 
 
 @router.post("/clear")
-async def clear_temp_files():
-    """Manually clear temporary files"""
-    cleanup_temp_files()
-    return {"message": "Temporary files cleared successfully"}
+async def clear_all_data():
+    """Clear all uploaded data (JD + Resumes + Outputs)"""
+    cleanup_all_files()
+    jd_state["uploaded"] = False
+    jd_state["filename"] = None
+    jd_state["processed"] = False
+    
+    return {
+        "message": "All data cleared successfully",
+        "jd_status": "cleared",
+        "resumes_status": "cleared"
+    }
+
+
+@router.delete("/clear-jd")
+async def clear_job_description():
+    """Clear only the Job Description"""
+    if TEMP_JD_DIR.exists():
+        shutil.rmtree(TEMP_JD_DIR)
+        TEMP_JD_DIR.mkdir(exist_ok=True)
+    
+    jd_state["uploaded"] = False
+    jd_state["filename"] = None
+    jd_state["processed"] = False
+    
+    return {
+        "message": "Job Description cleared. Upload new JD to continue."
+    }
+
+
+@router.delete("/clear-resumes")
+async def clear_resumes():
+    """Clear only the Resumes (keeps JD)"""
+    if TEMP_RESUMES_DIR.exists():
+        shutil.rmtree(TEMP_RESUMES_DIR)
+        TEMP_RESUMES_DIR.mkdir(exist_ok=True)
+    
+    if OUTPUT_DIR.exists():
+        shutil.rmtree(OUTPUT_DIR)
+        OUTPUT_DIR.mkdir(exist_ok=True)
+    
+    return {
+        "message": "Resumes cleared. JD is still active. Upload new resumes to re-analyze."
+    }
 
 
 @router.get("/debug/files")
 async def debug_files():
     """Debug endpoint to check file existence"""
     return {
-        "temp_dir": str(TEMP_DIR),
-        "temp_dir_exists": TEMP_DIR.exists(),
-        "temp_files": list(str(f) for f in TEMP_DIR.glob("*")) if TEMP_DIR.exists() else [],
+        "jd_state": jd_state,
+        
+        "jd_dir": str(TEMP_JD_DIR),
+        "jd_dir_exists": TEMP_JD_DIR.exists(),
+        "jd_files": list(str(f) for f in TEMP_JD_DIR.glob("*")) if TEMP_JD_DIR.exists() else [],
+        
+        "resumes_dir": str(TEMP_RESUMES_DIR),
+        "resumes_dir_exists": TEMP_RESUMES_DIR.exists(),
+        "resume_files": list(str(f) for f in TEMP_RESUMES_DIR.glob("*")) if TEMP_RESUMES_DIR.exists() else [],
         
         "output_dir": str(OUTPUT_DIR),
         "output_dir_exists": OUTPUT_DIR.exists(),

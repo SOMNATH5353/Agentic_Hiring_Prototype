@@ -39,7 +39,11 @@ def is_job_description(text: str) -> bool:
 class AnalysisService:
     def __init__(self):
         self.embedder = None
-        self.required_language = "python"  # Can be made configurable
+        self.required_language = "python"
+        # Cache JD processing results
+        self.jd_sentences = None
+        self.jd_requirements = None
+        self.jd_embeddings = None
     
     def is_model_loaded(self) -> bool:
         return self.embedder is not None
@@ -48,54 +52,74 @@ class AnalysisService:
         if self.embedder is None:
             self.embedder = SemanticEmbedder()
     
-    async def analyze_files(self, upload_dir: str, output_dir: str) -> Dict:
+    async def process_jd(self, jd_dir: str):
         """
-        Main analysis pipeline - simplified without session ID.
-        Processes files from upload_dir and saves to output_dir.
+        Process Job Description and cache results.
+        Called when JD is uploaded via POST /upload-jd
         """
         self._ensure_embedder()
         
-        # Load files
-        pdf_files = list(Path(upload_dir).glob("*.pdf"))
+        # Load JD file
+        pdf_files = list(Path(jd_dir).glob("*.pdf"))
         
-        if len(pdf_files) < 2:
-            raise ValueError("At least 2 PDF files required (1 JD + 1+ resumes)")
+        if len(pdf_files) != 1:
+            raise ValueError("Exactly 1 JD PDF file required")
         
-        # Identify JD and resumes
-        jd_text = None
-        jd_file = None
-        resume_files = []
+        jd_file = pdf_files[0]
+        jd_text = load_text(str(jd_file))
         
-        for pdf in pdf_files:
-            text = load_text(str(pdf))
-            if is_job_description(text) and jd_text is None:
-                jd_text = text
-                jd_file = str(pdf)
-            else:
-                resume_files.append((str(pdf), text))
+        # Check if it's a valid JD
+        if not is_job_description(jd_text):
+            raise ValueError("Uploaded file does not appear to be a Job Description")
         
-        if jd_text is None:
-            raise ValueError("No job description found in uploaded files")
+        # Preprocess and extract requirements
+        self.jd_sentences = preprocess_text(jd_text)
+        self.jd_requirements = extract_jd_requirements(self.jd_sentences)
         
-        # Preprocess JD
-        jd_sentences = preprocess_text(jd_text)
-        jd_requirements = extract_jd_requirements(jd_sentences)
+        # Generate embeddings
+        self.jd_embeddings = self.embedder.encode(self.jd_requirements)
+        
+        print(f"✅ JD processed: {len(self.jd_requirements)} requirements extracted")
+    
+    
+    async def analyze_resumes(self, jd_dir: str, resumes_dir: str, output_dir: str) -> Dict:
+        """
+        Analyze resumes against previously uploaded JD.
+        Uses cached JD data from process_jd().
+        """
+        self._ensure_embedder()
+        
+        # Ensure JD is processed
+        if self.jd_requirements is None or self.jd_embeddings is None:
+            # Process JD if not already done
+            await self.process_jd(jd_dir)
+        
+        # Load resume files
+        pdf_files = list(Path(resumes_dir).glob("*.pdf"))
+        
+        if len(pdf_files) < 1:
+            raise ValueError("At least 1 resume PDF file required")
+        
+        # Get JD filename for reference
+        jd_files = list(Path(jd_dir).glob("*.pdf"))
+        jd_file = str(jd_files[0]) if jd_files else "JD.pdf"
         
         # Preprocess resumes
         parsed_resumes = {}
-        for resume_file, resume_text in resume_files:
+        for resume_file in pdf_files:
+            resume_text = load_text(str(resume_file))
             clean_sentences = preprocess_text(resume_text)
-            parsed_resumes[Path(resume_file).name] = clean_sentences
+            parsed_resumes[resume_file.name] = clean_sentences
         
         # Generate analysis output PDF
         write_analysis_pdf(
             output_path=str(Path(output_dir) / "analysis_output.pdf"),
-            jd_sentences=jd_sentences,
+            jd_sentences=self.jd_sentences,
             resumes=parsed_resumes
         )
         
         # Evaluate candidates
-        jd_embeddings = self.embedder.encode(jd_requirements)
+        jd_embeddings = self.jd_embeddings
         
         candidates_data = []
         xai_reports = {}
@@ -104,7 +128,7 @@ class AnalysisService:
             resume_embeddings = self.embedder.encode(resume_sentences)
             
             semantic_matches = compute_semantic_matches(
-                jd_sentences=jd_requirements,
+                jd_sentences=self.jd_sentences,
                 jd_embeddings=jd_embeddings,
                 resume_sentences=resume_sentences,
                 resume_embeddings=resume_embeddings,
@@ -115,11 +139,11 @@ class AnalysisService:
             rfs = combined_role_fit_score(
                 semantic_matches, 
                 resume_sentences, 
-                jd_requirements
+                self.jd_requirements
             )
             css = capability_strength_score(resume_sentences)
             gps = growth_potential_score(resume_sentences)
-            dcs = domain_compatibility_score(jd_requirements, resume_sentences)
+            dcs = domain_compatibility_score(self.jd_requirements, resume_sentences)
             elc = execution_language_score(self.required_language, resume_sentences)
             
             # Decision
@@ -134,7 +158,7 @@ class AnalysisService:
                 action=action,
                 composite_score=composite,
                 semantic_matches=semantic_matches,
-                jd_requirements=jd_requirements,
+                jd_requirements=self.jd_requirements,
                 resume_sentences=resume_sentences
             )
             
